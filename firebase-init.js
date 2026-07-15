@@ -24,12 +24,12 @@ import {
 // Valores do painel do Firebase (Configurações do projeto > Seus apps).
 // Não são segredo: protegem com as regras do Firestore, não com sigilo desta config.
 export const firebaseConfig = {
-  apiKey: "COLE_AQUI",
-  authDomain: "COLE_AQUI.firebaseapp.com",
-  projectId: "COLE_AQUI",
-  storageBucket: "COLE_AQUI.appspot.com",
-  messagingSenderId: "COLE_AQUI",
-  appId: "COLE_AQUI",
+  apiKey: "AIzaSyDax3eQM9rROzP9Sw5OTtxd2TtpwDH4whM",
+  authDomain: "notavel-a4c05.firebaseapp.com",
+  projectId: "notavel-a4c05",
+  storageBucket: "notavel-a4c05.firebasestorage.app",
+  messagingSenderId: "674419117086",
+  appId: "1:674419117086:web:4efff354e1addfeda5320f",
 };
 
 export const app = initializeApp(firebaseConfig);
