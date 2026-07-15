@@ -1,4 +1,4 @@
-# Notável
+# AnotAI
 
 Checklist diário da operação, com login por CPF e área de administração para criar usuários e trocar senhas.
 
@@ -49,7 +49,7 @@ Depois acesse `http://localhost:8080` e use a aba "Primeiro acesso" para criar a
 ## Publicar no GitHub Pages
 
 Depois de subir o repositório para o GitHub, em **Settings → Pages**, escolha a branch `main`
-e a pasta raiz (`/`). O site fica disponível em `https://<seu-usuário>.github.io/notavel/`.
+e a pasta raiz (`/`). O site fica disponível em `https://<seu-usuário>.github.io/anotai/`.
 
 ## Limites conhecidos
 
