@@ -1,0 +1,250 @@
+:root {
+  --bg: #edebe3;
+  --surface: #ffffff;
+  --ink: #24261f;
+  --muted: #75735f;
+  --accent: #1f6f5c;
+  --accent-ink: #f2f7f5;
+  --line: #dbd7c8;
+  --danger: #b3492f;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1b1c17;
+    --surface: #24261f;
+    --ink: #ece9dd;
+    --muted: #9b9885;
+    --accent: #4fb89c;
+    --accent-ink: #10231d;
+    --line: #383a30;
+    --danger: #e0836b;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1b1c17;
+  --surface: #24261f;
+  --ink: #ece9dd;
+  --muted: #9b9885;
+  --accent: #4fb89c;
+  --accent-ink: #10231d;
+  --line: #383a30;
+  --danger: #e0836b;
+}
+:root[data-theme="light"] {
+  --bg: #edebe3;
+  --surface: #ffffff;
+  --ink: #24261f;
+  --muted: #75735f;
+  --accent: #1f6f5c;
+  --accent-ink: #f2f7f5;
+  --line: #dbd7c8;
+  --danger: #b3492f;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Segoe UI", system-ui, sans-serif;
+  min-height: 100vh;
+}
+.page {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 40px 16px 80px;
+}
+h1, h2 {
+  font-family: "Bahnschrift", "Segoe UI Semibold", system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin: 0;
+  text-wrap: balance;
+}
+h1 { font-size: 1.9rem; }
+h2 { font-size: 1.25rem; margin-bottom: 14px; }
+
+header.topbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.mono {
+  font-family: "Consolas", ui-monospace, monospace;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.nav-links {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.nav-links a, .nav-links button {
+  font-family: "Consolas", ui-monospace, monospace;
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-decoration: underline;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.nav-links a:hover, .nav-links button:hover { color: var(--accent); }
+
+/* Auth / centered card layout (login page) */
+.center-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 32px 28px;
+  width: 100%;
+  max-width: 380px;
+}
+.card .brand {
+  font-family: "Bahnschrift", "Segoe UI Semibold", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 1.6rem;
+  margin-bottom: 4px;
+}
+.card .tagline {
+  color: var(--muted);
+  font-size: 0.88rem;
+  margin-bottom: 26px;
+}
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--line);
+}
+.tabs button {
+  appearance: none;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 8px 4px;
+  margin-right: 16px;
+  font-family: "Consolas", ui-monospace, monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+}
+.tabs button.active {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+label {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+  margin-top: 16px;
+}
+label:first-of-type { margin-top: 0; }
+input[type="text"], input[type="password"], input[type="email"] {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.btn {
+  appearance: none;
+  border: none;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+  padding: 12px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  width: 100%;
+  margin-top: 22px;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn.secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+.msg {
+  font-size: 0.85rem;
+  margin-top: 14px;
+  min-height: 1.2em;
+}
+.msg.error { color: var(--danger); }
+.msg.ok { color: var(--accent); }
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 22px;
+  margin-bottom: 22px;
+}
+
+table.users {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+table.users th {
+  text-align: left;
+  font-family: "Consolas", ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 8px 8px;
+  border-bottom: 1px solid var(--line);
+}
+table.users td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+.pill {
+  display: inline-block;
+  font-family: "Consolas", ui-monospace, monospace;
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--line);
+  color: var(--ink);
+}
+.pill.admin { background: var(--accent); color: var(--accent-ink); }
+
+footer.credit {
+  margin-top: 36px;
+  text-align: center;
+  font-family: "Consolas", ui-monospace, monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}

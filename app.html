@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Notável — Checklist</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+  .progress-wrap { display: flex; align-items: center; gap: 14px; margin-bottom: 30px; }
+  .progress-track { flex: 1; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 4px; width: 0%; transition: width 0.35s ease; }
+  .progress-label { font-family: "Consolas", ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+  ul.tasks { list-style: none; margin: 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  li.task { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--dot, var(--accent)); border-radius: 8px; padding: 13px 14px; }
+  li.task.done { opacity: 0.55; }
+  li.task.done .task-text { text-decoration: line-through; text-decoration-color: var(--muted); }
+  .check {
+    appearance: none; -webkit-appearance: none; width: 21px; height: 21px; flex: none;
+    border-radius: 6px; border: 1.5px solid var(--line); background: var(--surface); cursor: pointer;
+    display: grid; place-items: center; position: relative;
+  }
+  .check:checked { background: var(--accent); border-color: var(--accent); }
+  .check:checked::after {
+    content: ""; position: absolute; width: 5px; height: 10px;
+    border: solid var(--accent-ink); border-width: 0 2px 2px 0;
+    transform: rotate(45deg) translate(-1px, -1px);
+  }
+  .check:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .task-text { flex: 1; font-size: 0.98rem; line-height: 1.35; }
+  .del-btn { appearance: none; background: none; border: none; color: var(--muted); font-size: 1.1rem; line-height: 1; cursor: pointer; padding: 4px 6px; border-radius: 5px; }
+  .del-btn:hover { color: var(--danger); background: var(--line); }
+  .add-row { display: flex; gap: 8px; margin-top: 6px; }
+  .add-row input[type="text"] { flex: 1; }
+  .swatches { display: flex; gap: 6px; align-items: center; }
+  .swatch { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
+  .swatch.selected { border-color: var(--ink); }
+  .add-row .btn { width: auto; margin-top: 0; padding: 0 18px; }
+  .empty { color: var(--muted); font-size: 0.95rem; padding: 20px 4px; text-align: center; }
+  .reset-row { margin-top: 28px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="topbar">
+    <h1>Checklist do Dia</h1>
+    <div class="nav-links">
+      <span class="mono" id="whoami"></span>
+      <a href="settings.html">Configurações</a>
+      <button type="button" id="logoutBtn">Sair</button>
+    </div>
+  </header>
+
+  <div class="progress-wrap">
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-label" id="progressLabel">0/0</div>
+  </div>
+
+  <ul class="tasks" id="taskList"></ul>
+
+  <div class="add-row">
+    <div class="swatches" id="swatches"></div>
+    <input type="text" id="newTaskInput" placeholder="Nova tarefa diária..." maxlength="120" />
+    <button class="btn" id="addBtn">Adicionar</button>
+  </div>
+
+  <div class="reset-row">
+    <button type="button" class="nav-links" id="resetBtn" style="background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;font-family:'Consolas',monospace;font-size:0.82rem;">Desmarcar tudo de hoje</button>
+  </div>
+
+  <footer class="credit">Notável — criado por Giovanni Brochini</footer>
+</div>
+
+<script type="module">
+  import { auth, onAuthStateChanged, signOut, getUserProfile } from "./firebase-init.js";
+
+  const COLORS = ["#d9a02e", "#9b6fd1", "#d9557f", "#4f9f5f", "#2e9fc9", "#c96b2e"];
+  var DEFAULT_TASKS = [
+    { id: "t1", text: "Consertos", color: COLORS[0] },
+    { id: "t2", text: "Inventários diários Rocha e Outlet", color: COLORS[1] },
+    { id: "t3", text: "Notas fiscais de entrada", color: COLORS[2] },
+    { id: "t4", text: "Enviar lacres para Guaratinguetá", color: COLORS[3] },
+    { id: "t5", text: "Atualização controle de caixa (automação fechamento)", color: COLORS[4] },
+    { id: "t6", text: "Atualização controle de compras (notas pendentes, transferências e pedidos)", color: COLORS[4] },
+  ];
+
+  let uid = null;
+  let tasks = [];
+  let done = [];
+  let selectedColor = COLORS[0];
+
+  function tasksKey() { return "notavel:tasks:" + uid; }
+  function doneKey() {
+    const d = new Date();
+    return "notavel:done:" + uid + ":" + d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function loadTasks() {
+    try {
+      const raw = localStorage.getItem(tasksKey());
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    localStorage.setItem(tasksKey(), JSON.stringify(DEFAULT_TASKS));
+    return DEFAULT_TASKS.slice();
+  }
+  function saveTasks() { localStorage.setItem(tasksKey(), JSON.stringify(tasks)); }
+  function loadDone() {
+    try {
+      const raw = localStorage.getItem(doneKey());
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return [];
+  }
+  function saveDone() { localStorage.setItem(doneKey(), JSON.stringify(done)); }
+
+  const listEl = document.getElementById("taskList");
+  const fillEl = document.getElementById("progressFill");
+  const labelEl = document.getElementById("progressLabel");
+  const swatchesEl = document.getElementById("swatches");
+  const input = document.getElementById("newTaskInput");
+
+  function renderSwatches() {
+    swatchesEl.innerHTML = "";
+    COLORS.forEach((c) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "swatch" + (c === selectedColor ? " selected" : "");
+      b.style.background = c;
+      b.setAttribute("aria-label", "Escolher cor " + c);
+      b.onclick = () => { selectedColor = c; renderSwatches(); };
+      swatchesEl.appendChild(b);
+    });
+  }
+
+  function render() {
+    listEl.innerHTML = "";
+    if (tasks.length === 0) {
+      const empty = document.createElement("li");
+      empty.className = "empty";
+      empty.textContent = "Nenhuma tarefa ainda. Adicione a primeira abaixo.";
+      listEl.appendChild(empty);
+    }
+    tasks.forEach((t) => {
+      const isDone = done.indexOf(t.id) !== -1;
+      const li = document.createElement("li");
+      li.className = "task" + (isDone ? " done" : "");
+      li.style.setProperty("--dot", t.color);
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.className = "check";
+      cb.checked = isDone;
+      cb.setAttribute("aria-label", "Marcar " + t.text + " como concluída");
+      cb.onchange = () => {
+        if (cb.checked) { if (done.indexOf(t.id) === -1) done.push(t.id); }
+        else { done = done.filter((id) => id !== t.id); }
+        saveDone();
+        render();
+      };
+
+      const span = document.createElement("span");
+      span.className = "task-text";
+      span.textContent = t.text;
+
+      const del = document.createElement("button");
+      del.className = "del-btn";
+      del.textContent = "×";
+      del.setAttribute("aria-label", "Remover tarefa " + t.text);
+      del.onclick = () => {
+        tasks = tasks.filter((x) => x.id !== t.id);
+        done = done.filter((id) => id !== t.id);
+        saveTasks(); saveDone(); render();
+      };
+
+      li.appendChild(cb); li.appendChild(span); li.appendChild(del);
+      listEl.appendChild(li);
+    });
+
+    const total = tasks.length;
+    const completed = tasks.filter((t) => done.indexOf(t.id) !== -1).length;
+    const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
+    fillEl.style.width = pct + "%";
+    labelEl.textContent = completed + "/" + total;
+  }
+
+  document.getElementById("addBtn").onclick = () => {
+    const text = input.value.trim();
+    if (!text) return;
+    tasks.push({ id: "t" + Date.now(), text, color: selectedColor });
+    saveTasks(); input.value = ""; render();
+  };
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") document.getElementById("addBtn").click(); });
+  document.getElementById("resetBtn").onclick = () => { done = []; saveDone(); render(); };
+  document.getElementById("logoutBtn").onclick = () => signOut(auth);
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { window.location.href = "index.html"; return; }
+    uid = user.uid;
+    tasks = loadTasks();
+    done = loadDone();
+    const profile = await getUserProfile(uid);
+    document.getElementById("whoami").textContent = profile && profile.displayName ? profile.displayName : "";
+    renderSwatches();
+    render();
+  });
+</script>
+</body>
+</html>

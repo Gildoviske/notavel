@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Notável — Configurações</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="page">
+  <header class="topbar">
+    <h1>Configurações</h1>
+    <div class="nav-links">
+      <a href="app.html">← Checklist</a>
+      <button type="button" id="logoutBtn">Sair</button>
+    </div>
+  </header>
+
+  <div class="panel">
+    <h2>Minha conta</h2>
+    <div class="mono" id="myInfo" style="margin-bottom:10px;"></div>
+    <form id="passForm">
+      <label for="curPass">Senha atual</label>
+      <input type="password" id="curPass" autocomplete="current-password" required />
+      <label for="newPass">Nova senha</label>
+      <input type="password" id="newPass" minlength="6" autocomplete="new-password" required />
+      <label for="newPass2">Confirmar nova senha</label>
+      <input type="password" id="newPass2" minlength="6" autocomplete="new-password" required />
+      <button class="btn secondary" type="submit">Trocar minha senha</button>
+      <div class="msg" id="passMsg"></div>
+    </form>
+  </div>
+
+  <div class="panel" id="adminPanel" style="display:none">
+    <h2>Administração</h2>
+    <p class="mono" style="margin-top:-8px;margin-bottom:18px;">Criar um novo usuário e ver quem já tem acesso.</p>
+    <form id="createForm">
+      <label for="newCpf">CPF do novo usuário</label>
+      <input type="text" id="newCpf" inputmode="numeric" placeholder="000.000.000-00" required />
+      <label for="newName">Nome</label>
+      <input type="text" id="newName" required />
+      <label for="newInitialPass">Senha inicial</label>
+      <input type="password" id="newInitialPass" minlength="6" required />
+      <button class="btn" type="submit">Criar usuário</button>
+      <div class="msg" id="createMsg"></div>
+    </form>
+
+    <div style="overflow-x:auto; margin-top: 26px;">
+      <table class="users">
+        <thead>
+          <tr><th>Nome</th><th>CPF</th><th>Papel</th><th>Criado em</th></tr>
+        </thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer class="credit">Notável — criado por Giovanni Brochini</footer>
+</div>
+
+<script type="module">
+  import {
+    auth, signOut, onAuthStateChanged,
+    getUserProfile, listUsers, createUserAsAdmin, maskCpf,
+    reauthenticateWithCredential, EmailAuthProvider, updatePassword,
+  } from "./firebase-init.js";
+
+  document.getElementById("logoutBtn").onclick = () => signOut(auth);
+
+  let currentUser = null;
+  let currentProfile = null;
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { window.location.href = "index.html"; return; }
+    currentUser = user;
+    currentProfile = await getUserProfile(user.uid);
+    document.getElementById("myInfo").textContent =
+      (currentProfile?.displayName || "") + " — CPF " + maskCpf(currentProfile?.cpf || "");
+
+    if (currentProfile?.role === "admin") {
+      document.getElementById("adminPanel").style.display = "block";
+      await refreshUsers();
+    }
+  });
+
+  document.getElementById("passForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById("passMsg");
+    msg.className = "msg"; msg.textContent = "";
+    const cur = document.getElementById("curPass").value;
+    const n1 = document.getElementById("newPass").value;
+    const n2 = document.getElementById("newPass2").value;
+    if (n1 !== n2) { msg.className = "msg error"; msg.textContent = "As senhas novas não coincidem."; return; }
+    try {
+      const cred = EmailAuthProvider.credential(currentUser.email, cur);
+      await reauthenticateWithCredential(currentUser, cred);
+      await updatePassword(currentUser, n1);
+      msg.className = "msg ok"; msg.textContent = "Senha alterada com sucesso.";
+      e.target.reset();
+    } catch (err) {
+      msg.className = "msg error"; msg.textContent = "Não foi possível trocar a senha: senha atual incorreta ou erro (" + err.code + ").";
+    }
+  });
+
+  document.getElementById("createForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById("createMsg");
+    msg.className = "msg"; msg.textContent = "";
+    const cpf = document.getElementById("newCpf").value;
+    const displayName = document.getElementById("newName").value;
+    const password = document.getElementById("newInitialPass").value;
+    try {
+      await createUserAsAdmin({ cpf, displayName, password });
+      msg.className = "msg ok"; msg.textContent = "Usuário criado. Avise a pessoa da senha inicial para ela trocar no primeiro acesso.";
+      e.target.reset();
+      await refreshUsers();
+    } catch (err) {
+      msg.className = "msg error"; msg.textContent = "Não foi possível criar: " + err.code;
+    }
+  });
+
+  async function refreshUsers() {
+    const users = await listUsers();
+    const body = document.getElementById("usersBody");
+    body.innerHTML = "";
+    users.forEach((u) => {
+      const tr = document.createElement("tr");
+      const created = u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString("pt-BR") : "—";
+      tr.innerHTML =
+        "<td>" + (u.displayName || "—") + "</td>" +
+        "<td>" + maskCpf(u.cpf) + "</td>" +
+        "<td><span class='pill" + (u.role === "admin" ? " admin" : "") + "'>" + u.role + "</span></td>" +
+        "<td>" + created + "</td>";
+      body.appendChild(tr);
+    });
+  }
+</script>
+</body>
+</html>

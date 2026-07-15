@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Notável — Entrar</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="center-wrap">
+  <div class="card">
+    <div class="brand">Notável</div>
+    <div class="tagline">Checklist diário da operação</div>
+
+    <div class="tabs">
+      <button type="button" class="tab-btn active" data-tab="login">Entrar</button>
+      <button type="button" class="tab-btn" data-tab="bootstrap">Primeiro acesso</button>
+    </div>
+
+    <form id="loginForm" class="tab-panel">
+      <label for="loginCpf">CPF</label>
+      <input type="text" id="loginCpf" inputmode="numeric" autocomplete="username" placeholder="000.000.000-00" required />
+      <label for="loginPass">Senha</label>
+      <input type="password" id="loginPass" autocomplete="current-password" required />
+      <button class="btn" type="submit">Entrar</button>
+      <div class="msg error" id="loginMsg"></div>
+    </form>
+
+    <form id="bootstrapForm" class="tab-panel" style="display:none">
+      <label for="bsCpf">CPF do administrador</label>
+      <input type="text" id="bsCpf" inputmode="numeric" placeholder="000.000.000-00" required />
+      <label for="bsName">Nome</label>
+      <input type="text" id="bsName" placeholder="Seu nome" required />
+      <label for="bsPass">Senha</label>
+      <input type="password" id="bsPass" minlength="6" required />
+      <button class="btn" type="submit">Criar conta de administrador</button>
+      <div class="msg" id="bsMsg">Só funciona uma vez: assim que a primeira conta de administrador existir, este formulário deixa de funcionar.</div>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+  import {
+    auth, db, cpfToEmail,
+    onAuthStateChanged, signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    doc, getDoc, setDoc, serverTimestamp,
+  } from "./firebase-init.js";
+
+  const tabBtns = document.querySelectorAll(".tab-btn");
+  const panels = { login: document.getElementById("loginForm"), bootstrap: document.getElementById("bootstrapForm") };
+  tabBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      tabBtns.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      Object.entries(panels).forEach(([key, el]) => {
+        el.style.display = key === btn.dataset.tab ? "block" : "none";
+      });
+    });
+  });
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) window.location.href = "app.html";
+  });
+
+  document.getElementById("loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById("loginMsg");
+    msg.textContent = "";
+    const cpf = document.getElementById("loginCpf").value;
+    const pass = document.getElementById("loginPass").value;
+    try {
+      await signInWithEmailAndPassword(auth, cpfToEmail(cpf), pass);
+      window.location.href = "app.html";
+    } catch (err) {
+      msg.textContent = "CPF ou senha inválidos.";
+    }
+  });
+
+  document.getElementById("bootstrapForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById("bsMsg");
+    const cpf = document.getElementById("bsCpf").value;
+    const displayName = document.getElementById("bsName").value;
+    const pass = document.getElementById("bsPass").value;
+    try {
+      const adminMetaRef = doc(db, "meta", "adminUid");
+      const existing = await getDoc(adminMetaRef);
+      if (existing.exists()) {
+        msg.textContent = "Já existe uma conta de administrador. Use a aba Entrar.";
+        msg.className = "msg error";
+        return;
+      }
+      const cred = await createUserWithEmailAndPassword(auth, cpfToEmail(cpf), pass);
+      await setDoc(adminMetaRef, { uid: cred.user.uid });
+      await setDoc(doc(db, "users", cred.user.uid), {
+        cpf: String(cpf).replace(/\D/g, ""),
+        displayName,
+        role: "admin",
+        createdAt: serverTimestamp(),
+      });
+      window.location.href = "app.html";
+    } catch (err) {
+      msg.textContent = "Não foi possível criar a conta: " + err.message;
+      msg.className = "msg error";
+    }
+  });
+</script>
+</body>
+</html>

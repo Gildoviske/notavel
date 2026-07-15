@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/meta/adminUid)
+        && get(/databases/$(database)/documents/meta/adminUid).data.uid == request.auth.uid;
+    }
+
+    // Marca qual uid é o administrador. Só pode ser criado uma vez (primeiro acesso)
+    // e nunca mais pode ser alterado ou apagado pelo cliente.
+    match /meta/adminUid {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && !exists(/databases/$(database)/documents/meta/adminUid)
+        && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Perfis de usuário (nome, cpf, papel). O admin gerencia todo mundo;
+    // qualquer usuário pode ler a lista e atualizar o próprio nome.
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && (
+        isAdmin() ||
+        (!exists(/databases/$(database)/documents/meta/adminUid) && uid == request.auth.uid)
+      );
+      allow update: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+  }
+}
