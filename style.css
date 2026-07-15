@@ -112,11 +112,28 @@ header.topbar {
   max-width: 380px;
 }
 .card .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-family: "Bahnschrift", "Segoe UI Semibold", system-ui, sans-serif;
   font-weight: 600;
   font-size: 1.6rem;
   margin-bottom: 4px;
 }
+.logo-mark { flex: none; display: block; }
+.brand .ai, .brand-mini .ai { color: var(--accent); }
+
+.brand-mini {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: "Bahnschrift", "Segoe UI Semibold", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.brand-mini .logo-mark { width: 18px; height: 18px; }
 .card .tagline {
   color: var(--muted);
   font-size: 0.88rem;

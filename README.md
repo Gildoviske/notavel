@@ -1,4 +1,4 @@
-# AnotAI
+# AnotAi
 
 Checklist diário da operação, com login por CPF e área de administração para criar usuários e trocar senhas.
 
