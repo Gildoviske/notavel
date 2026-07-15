@@ -84,14 +84,17 @@
     const displayName = document.getElementById("bsName").value;
     const pass = document.getElementById("bsPass").value;
     try {
+      // Precisa criar (e autenticar) a conta antes de ler/gravar no Firestore,
+      // já que as regras exigem login para acessar "meta/adminUid".
+      const cred = await createUserWithEmailAndPassword(auth, cpfToEmail(cpf), pass);
       const adminMetaRef = doc(db, "meta", "adminUid");
       const existing = await getDoc(adminMetaRef);
       if (existing.exists()) {
+        await cred.user.delete();
         msg.textContent = "Já existe uma conta de administrador. Use a aba Entrar.";
         msg.className = "msg error";
         return;
       }
-      const cred = await createUserWithEmailAndPassword(auth, cpfToEmail(cpf), pass);
       await setDoc(adminMetaRef, { uid: cred.user.uid });
       await setDoc(doc(db, "users", cred.user.uid), {
         cpf: String(cpf).replace(/\D/g, ""),
