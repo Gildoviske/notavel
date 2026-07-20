@@ -85,8 +85,12 @@
     });
   });
 
+  // Enquanto o cadastro de admin estiver rolando, esse redirecionamento
+  // automático não pode disparar: ele cortava o processo no meio, antes das
+  // gravações no Firestore terminarem, mesmo com o login já feito.
+  let suppressAutoRedirect = false;
   onAuthStateChanged(auth, (user) => {
-    if (user) window.location.href = "app.html";
+    if (user && !suppressAutoRedirect) window.location.href = "app.html";
   });
 
   document.getElementById("loginForm").addEventListener("submit", async (e) => {
@@ -109,6 +113,7 @@
     const cpf = document.getElementById("bsCpf").value;
     const displayName = document.getElementById("bsName").value;
     const pass = document.getElementById("bsPass").value;
+    suppressAutoRedirect = true;
     try {
       // Precisa criar (e autenticar) a conta antes de ler/gravar no Firestore,
       // já que as regras exigem login para acessar "meta/adminUid".
@@ -129,6 +134,7 @@
       const existing = await getDoc(adminMetaRef);
       if (existing.exists()) {
         await cred.user.delete();
+        suppressAutoRedirect = false;
         msg.textContent = "Já existe uma conta de administrador. Use a aba Entrar.";
         msg.className = "msg error";
         return;
@@ -142,6 +148,7 @@
       });
       window.location.href = "app.html";
     } catch (err) {
+      suppressAutoRedirect = false;
       msg.textContent = "Não foi possível criar a conta: " + err.message;
       msg.className = "msg error";
     }
