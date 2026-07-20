@@ -14,7 +14,10 @@ service cloud.firestore {
     // Marca qual uid é o administrador. Só pode ser criado uma vez (primeiro acesso)
     // e nunca mais pode ser alterado ou apagado pelo cliente.
     match /meta/adminUid {
-      allow read: if isSignedIn();
+      // Leitura pública: a tela de login precisa saber (mesmo deslogado) se já
+      // existe um admin, para decidir se mostra a aba de primeiro acesso.
+      // O conteúdo (um uid) não é informação sensível.
+      allow read: if true;
       allow create: if isSignedIn()
         && !exists(/databases/$(database)/documents/meta/adminUid)
         && request.resource.data.uid == request.auth.uid;

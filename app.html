@@ -6,6 +6,11 @@
 <title>AnotAi — Checklist</title>
 <link rel="stylesheet" href="style.css" />
 <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="favicon.svg" />
+<meta name="theme-color" content="#1f6f5c" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="AnotAi" />
 <style>
   .progress-wrap { display: flex; align-items: center; gap: 14px; margin-bottom: 30px; }
   .progress-track { flex: 1; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
@@ -38,6 +43,18 @@
   .add-row .btn { width: auto; margin-top: 0; padding: 0 18px; }
   .empty { color: var(--muted); font-size: 0.95rem; padding: 20px 4px; text-align: center; }
   .reset-row { margin-top: 28px; text-align: center; }
+  .freq-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .freq-label { font-family: "Consolas", ui-monospace, monospace; font-size: 0.78rem; color: var(--muted); }
+  .day-pill {
+    appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+    border-radius: 999px; padding: 4px 10px; font-size: 0.78rem; cursor: pointer;
+    font-family: "Consolas", ui-monospace, monospace; text-transform: capitalize;
+  }
+  .day-pill.selected { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .task-freq {
+    font-family: "Consolas", ui-monospace, monospace; font-size: 0.72rem; color: var(--muted);
+    white-space: nowrap;
+  }
 </style>
 </head>
 <body>
@@ -69,8 +86,13 @@
 
   <div class="add-row">
     <div class="swatches" id="swatches"></div>
-    <input type="text" id="newTaskInput" placeholder="Nova tarefa diária..." maxlength="120" />
+    <input type="text" id="newTaskInput" placeholder="Nova tarefa..." maxlength="120" />
     <button class="btn" id="addBtn">Adicionar</button>
+  </div>
+  <div class="freq-row">
+    <span class="freq-label">Repetir:</span>
+    <div class="days-picker" id="daysPicker" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+    <span class="freq-label">(nenhum dia marcado = todo dia)</span>
   </div>
 
   <div class="reset-row">
@@ -84,19 +106,25 @@
   import { auth, onAuthStateChanged, signOut, getUserProfile } from "./firebase-init.js";
 
   const COLORS = ["#d9a02e", "#9b6fd1", "#d9557f", "#4f9f5f", "#2e9fc9", "#c96b2e"];
+  const WEEKDAYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
   var DEFAULT_TASKS = [
-    { id: "t1", text: "Consertos", color: COLORS[0] },
-    { id: "t2", text: "Inventários diários Rocha e Outlet", color: COLORS[1] },
-    { id: "t3", text: "Notas fiscais de entrada", color: COLORS[2] },
-    { id: "t4", text: "Enviar lacres para Guaratinguetá", color: COLORS[3] },
-    { id: "t5", text: "Atualização controle de caixa (automação fechamento)", color: COLORS[4] },
-    { id: "t6", text: "Atualização controle de compras (notas pendentes, transferências e pedidos)", color: COLORS[4] },
+    { id: "t1", text: "Consertos", color: COLORS[0], days: [] },
+    { id: "t2", text: "Inventários diários Rocha e Outlet", color: COLORS[1], days: [] },
+    { id: "t3", text: "Notas fiscais de entrada", color: COLORS[2], days: [] },
+    { id: "t4", text: "Enviar lacres para Guaratinguetá", color: COLORS[3], days: [] },
+    { id: "t5", text: "Atualização controle de caixa (automação fechamento)", color: COLORS[4], days: [] },
+    { id: "t6", text: "Atualização controle de compras (notas pendentes, transferências e pedidos)", color: COLORS[4], days: [] },
   ];
 
   let uid = null;
   let tasks = [];
   let done = [];
   let selectedColor = COLORS[0];
+  let selectedDays = new Set();
+
+  function appliesToday(t) {
+    return !t.days || t.days.length === 0 || t.days.includes(new Date().getDay());
+  }
 
   function tasksKey() { return "notavel:tasks:" + uid; }
   function doneKey() {
@@ -126,6 +154,7 @@
   const fillEl = document.getElementById("progressFill");
   const labelEl = document.getElementById("progressLabel");
   const swatchesEl = document.getElementById("swatches");
+  const daysPickerEl = document.getElementById("daysPicker");
   const input = document.getElementById("newTaskInput");
 
   function renderSwatches() {
@@ -141,15 +170,34 @@
     });
   }
 
+  function renderDaysPicker() {
+    daysPickerEl.innerHTML = "";
+    WEEKDAYS.forEach((label, idx) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "day-pill" + (selectedDays.has(idx) ? " selected" : "");
+      b.textContent = label;
+      b.title = selectedDays.has(idx) ? "Clique para remover" : "Clique para incluir esse dia";
+      b.onclick = () => {
+        if (selectedDays.has(idx)) selectedDays.delete(idx); else selectedDays.add(idx);
+        renderDaysPicker();
+      };
+      daysPickerEl.appendChild(b);
+    });
+  }
+
   function render() {
     listEl.innerHTML = "";
-    if (tasks.length === 0) {
+    const todays = tasks.filter(appliesToday);
+    if (todays.length === 0) {
       const empty = document.createElement("li");
       empty.className = "empty";
-      empty.textContent = "Nenhuma tarefa ainda. Adicione a primeira abaixo.";
+      empty.textContent = tasks.length === 0
+        ? "Nenhuma tarefa ainda. Adicione a primeira abaixo."
+        : "Nenhuma tarefa marcada para hoje.";
       listEl.appendChild(empty);
     }
-    tasks.forEach((t) => {
+    todays.forEach((t) => {
       const isDone = done.indexOf(t.id) !== -1;
       const li = document.createElement("li");
       li.className = "task" + (isDone ? " done" : "");
@@ -181,12 +229,19 @@
         saveTasks(); saveDone(); render();
       };
 
-      li.appendChild(cb); li.appendChild(span); li.appendChild(del);
+      li.appendChild(cb); li.appendChild(span);
+      if (t.days && t.days.length > 0) {
+        const freq = document.createElement("span");
+        freq.className = "task-freq";
+        freq.textContent = t.days.slice().sort().map((d) => WEEKDAYS[d]).join(", ");
+        li.appendChild(freq);
+      }
+      li.appendChild(del);
       listEl.appendChild(li);
     });
 
-    const total = tasks.length;
-    const completed = tasks.filter((t) => done.indexOf(t.id) !== -1).length;
+    const total = todays.length;
+    const completed = todays.filter((t) => done.indexOf(t.id) !== -1).length;
     const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
     fillEl.style.width = pct + "%";
     labelEl.textContent = completed + "/" + total;
@@ -195,8 +250,11 @@
   document.getElementById("addBtn").onclick = () => {
     const text = input.value.trim();
     if (!text) return;
-    tasks.push({ id: "t" + Date.now(), text, color: selectedColor });
-    saveTasks(); input.value = ""; render();
+    tasks.push({ id: "t" + Date.now(), text, color: selectedColor, days: Array.from(selectedDays).sort() });
+    saveTasks(); input.value = "";
+    selectedDays = new Set();
+    renderDaysPicker();
+    render();
   };
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") document.getElementById("addBtn").click(); });
   document.getElementById("resetBtn").onclick = () => { done = []; saveDone(); render(); };
@@ -210,8 +268,14 @@
     done = loadDone();
     document.getElementById("whoami").textContent = profile && profile.displayName ? profile.displayName : "";
     renderSwatches();
+    renderDaysPicker();
     render();
   });
+</script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js"));
+  }
 </script>
 </body>
 </html>

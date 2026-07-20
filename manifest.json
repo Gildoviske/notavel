@@ -1,0 +1,13 @@
+{
+  "name": "AnotAi",
+  "short_name": "AnotAi",
+  "description": "Checklist diário da operação",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#edebe3",
+  "theme_color": "#1f6f5c",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

@@ -20,6 +20,27 @@ um detalhe técnico: ninguém loga com e-mail, só com CPF e senha.
 digitando o CPF e a senha diretamente na tela de "Primeiro acesso" — o Firebase cuida de guardar
 isso com segurança (nunca em texto puro, nem aqui, nem no repositório).
 
+Assim que existir um administrador, a aba "Primeiro acesso" some da tela de login para todo mundo
+— a partir daí, só o administrador cria contas novas, pela página de Configurações.
+
+## Frequência das tarefas
+
+Ao adicionar uma tarefa em `app.html`, dá para marcar em quais dias da semana ela deve aparecer
+(seção "Repetir"). Sem nenhum dia marcado, a tarefa aparece todo dia — esse é o comportamento
+padrão. As tarefas que não se aplicam ao dia atual simplesmente não entram na lista nem na conta
+do progresso.
+
+## Instalar como app no celular (PWA)
+
+O site tem um `manifest.json` e um `sw.js` (service worker), então no Android/Chrome deve aparecer
+a opção "Adicionar à tela inicial" / "Instalar app" sozinha ao abrir o site pelo celular. No iPhone
+(Safari), use o menu de compartilhamento → "Adicionar à Tela de Início" (o ícone final fica mais
+simples que no Android, já que o `favicon.svg` não é convertido automaticamente).
+
+Se você atualizar o site e a mudança não aparecer no celular (o service worker guarda os arquivos
+em cache), troque `anotai-v1` para `anotai-v2` (ou qualquer outro nome) no topo do arquivo
+[`sw.js`](sw.js) — isso força os aparelhos a buscarem a versão nova.
+
 ## Configurar o Firebase (uma vez só)
 
 1. Acesse [console.firebase.google.com](https://console.firebase.google.com) e crie um projeto novo (é gratuito, não pede cartão para o plano padrão "Spark").

@@ -6,6 +6,11 @@
 <title>AnotAi — Entrar</title>
 <link rel="stylesheet" href="style.css" />
 <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="favicon.svg" />
+<meta name="theme-color" content="#1f6f5c" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="AnotAi" />
 </head>
 <body>
 <div class="center-wrap">
@@ -19,7 +24,7 @@
     </div>
     <div class="tagline">Checklist diário da operação</div>
 
-    <div class="tabs">
+    <div class="tabs" id="tabsRow">
       <button type="button" class="tab-btn active" data-tab="login">Entrar</button>
       <button type="button" class="tab-btn" data-tab="bootstrap">Primeiro acesso</button>
     </div>
@@ -53,6 +58,20 @@
     createUserWithEmailAndPassword,
     doc, getDoc, setDoc, serverTimestamp,
   } from "./firebase-init.js";
+
+  // Depois que o primeiro administrador existe, ninguém mais deve conseguir
+  // criar conta por essa tela — só o admin cria gente nova em Configurações.
+  (async function hideSignupIfAdminExists() {
+    try {
+      const snap = await getDoc(doc(db, "meta", "adminUid"));
+      if (snap.exists()) {
+        document.getElementById("tabsRow").style.display = "none";
+        document.getElementById("bootstrapForm").style.display = "none";
+      }
+    } catch (e) {
+      // se a leitura falhar por algum motivo, mantém as abas visíveis
+    }
+  })();
 
   const tabBtns = document.querySelectorAll(".tab-btn");
   const panels = { login: document.getElementById("loginForm"), bootstrap: document.getElementById("bootstrapForm") };
@@ -115,6 +134,11 @@
       msg.className = "msg error";
     }
   });
+</script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js"));
+  }
 </script>
 </body>
 </html>
