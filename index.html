@@ -112,7 +112,19 @@
     try {
       // Precisa criar (e autenticar) a conta antes de ler/gravar no Firestore,
       // já que as regras exigem login para acessar "meta/adminUid".
-      const cred = await createUserWithEmailAndPassword(auth, cpfToEmail(cpf), pass);
+      let cred;
+      try {
+        cred = await createUserWithEmailAndPassword(auth, cpfToEmail(cpf), pass);
+      } catch (err) {
+        if (err.code === "auth/email-already-in-use") {
+          // Uma tentativa anterior pode ter criado o login sem terminar de
+          // salvar os dados no Firestore. Entra na conta já existente para
+          // completar o que faltou, em vez de travar aqui.
+          cred = await signInWithEmailAndPassword(auth, cpfToEmail(cpf), pass);
+        } else {
+          throw err;
+        }
+      }
       const adminMetaRef = doc(db, "meta", "adminUid");
       const existing = await getDoc(adminMetaRef);
       if (existing.exists()) {
