@@ -11,6 +11,14 @@
 <meta name="theme-color" content="#1f6f5c" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="AnotAi" />
+<style>
+  .row-remove {
+    appearance: none; background: none; border: 1px solid var(--line); color: var(--danger);
+    border-radius: 6px; padding: 4px 10px; font-size: 0.78rem; cursor: pointer;
+    font-family: "Consolas", ui-monospace, monospace;
+  }
+  .row-remove:hover { background: var(--danger); border-color: var(--danger); color: var(--accent-ink); }
+</style>
 </head>
 <body>
 <div class="page">
@@ -63,7 +71,7 @@
     <div style="overflow-x:auto; margin-top: 26px;">
       <table class="users">
         <thead>
-          <tr><th>Nome</th><th>CPF</th><th>Papel</th><th>Criado em</th></tr>
+          <tr><th>Nome</th><th>CPF</th><th>Papel</th><th>Criado em</th><th></th></tr>
         </thead>
         <tbody id="usersBody"></tbody>
       </table>
@@ -76,7 +84,7 @@
 <script type="module">
   import {
     auth, signOut, onAuthStateChanged,
-    getUserProfile, listUsers, createUserAsAdmin, maskCpf,
+    getUserProfile, listUsers, createUserAsAdmin, removeUser, maskCpf,
     reauthenticateWithCredential, EmailAuthProvider, updatePassword,
   } from "./firebase-init.js";
 
@@ -134,6 +142,12 @@
     }
   });
 
+  function cell(text) {
+    const td = document.createElement("td");
+    td.textContent = text;
+    return td;
+  }
+
   async function refreshUsers() {
     const users = await listUsers();
     const body = document.getElementById("usersBody");
@@ -141,11 +155,38 @@
     users.forEach((u) => {
       const tr = document.createElement("tr");
       const created = u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString("pt-BR") : "—";
-      tr.innerHTML =
-        "<td>" + (u.displayName || "—") + "</td>" +
-        "<td>" + maskCpf(u.cpf) + "</td>" +
-        "<td><span class='pill" + (u.role === "admin" ? " admin" : "") + "'>" + u.role + "</span></td>" +
-        "<td>" + created + "</td>";
+
+      tr.appendChild(cell(u.displayName || "—"));
+      tr.appendChild(cell(maskCpf(u.cpf)));
+
+      const roleTd = document.createElement("td");
+      const pill = document.createElement("span");
+      pill.className = "pill" + (u.role === "admin" ? " admin" : "");
+      pill.textContent = u.role;
+      roleTd.appendChild(pill);
+      tr.appendChild(roleTd);
+
+      tr.appendChild(cell(created));
+
+      const actionTd = document.createElement("td");
+      if (u.role !== "admin") {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "row-remove";
+        btn.textContent = "Remover";
+        btn.onclick = async () => {
+          const ok = window.confirm(
+            "Remover " + (u.displayName || "esse usuário") + "? Ele deixa de aparecer aqui e de acessar o checklist, " +
+            "mas o login continua existindo no Firebase até ser apagado por lá também."
+          );
+          if (!ok) return;
+          await removeUser(u.uid);
+          await refreshUsers();
+        };
+        actionTd.appendChild(btn);
+      }
+      tr.appendChild(actionTd);
+
       body.appendChild(tr);
     });
   }

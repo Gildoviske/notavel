@@ -14,6 +14,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  deleteDoc,
   collection,
   getDocs,
   query,
@@ -79,6 +80,16 @@ export async function createUserAsAdmin({ cpf, displayName, password }) {
   }
 }
 
+// Remove o cadastro do usuário (some da lista do admin e ele perde o papel
+// de usuário do app). Isso NÃO apaga a conta de login no Authentication —
+// fazer isso exigiria o SDK Admin do Firebase (plano pago Blaze), que não
+// está habilitado neste projeto. Ou seja, a pessoa some da lista e perde
+// acesso às tarefas, mas o login dela ainda existiria se alguém tivesse a
+// senha.
+export async function removeUser(uid) {
+  await deleteDoc(doc(db, "users", uid));
+}
+
 export {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -90,6 +101,7 @@ export {
   doc,
   getDoc,
   setDoc,
+  deleteDoc,
   collection,
   getDocs,
   serverTimestamp,
