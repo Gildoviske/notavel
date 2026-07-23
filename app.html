@@ -55,6 +55,13 @@
     font-family: "Consolas", ui-monospace, monospace; font-size: 0.72rem; color: var(--muted);
     white-space: nowrap;
   }
+  .filter-row { display: flex; gap: 4px; margin-bottom: 14px; }
+  .filter-btn {
+    appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+    border-radius: 999px; padding: 5px 13px; font-size: 0.78rem; cursor: pointer;
+    font-family: "Consolas", ui-monospace, monospace; text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 </style>
 </head>
 <body>
@@ -80,6 +87,12 @@
   <div class="progress-wrap">
     <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
     <div class="progress-label" id="progressLabel">0/0</div>
+  </div>
+
+  <div class="filter-row" id="filterRow">
+    <button type="button" class="filter-btn active" data-filter="all">Todas</button>
+    <button type="button" class="filter-btn" data-filter="pending">Pendentes</button>
+    <button type="button" class="filter-btn" data-filter="done">Feitas</button>
   </div>
 
   <ul class="tasks" id="taskList"></ul>
@@ -121,6 +134,7 @@
   let done = [];
   let selectedColor = COLORS[0];
   let selectedDays = new Set();
+  let currentFilter = "all";
 
   function appliesToday(t) {
     return !t.days || t.days.length === 0 || t.days.includes(new Date().getDay());
@@ -189,15 +203,24 @@
   function render() {
     listEl.innerHTML = "";
     const todays = tasks.filter(appliesToday);
-    if (todays.length === 0) {
+    todays.sort((a, b) => COLORS.indexOf(a.color) - COLORS.indexOf(b.color));
+
+    let visible = todays;
+    if (currentFilter === "pending") visible = todays.filter((t) => done.indexOf(t.id) === -1);
+    else if (currentFilter === "done") visible = todays.filter((t) => done.indexOf(t.id) !== -1);
+
+    if (visible.length === 0) {
       const empty = document.createElement("li");
       empty.className = "empty";
-      empty.textContent = tasks.length === 0
-        ? "Nenhuma tarefa ainda. Adicione a primeira abaixo."
-        : "Nenhuma tarefa marcada para hoje.";
+      empty.textContent =
+        tasks.length === 0 ? "Nenhuma tarefa ainda. Adicione a primeira abaixo." :
+        todays.length === 0 ? "Nenhuma tarefa marcada para hoje." :
+        currentFilter === "pending" ? "Todas as tarefas de hoje já foram concluídas." :
+        currentFilter === "done" ? "Nenhuma tarefa concluída ainda hoje." :
+        "Nenhuma tarefa marcada para hoje.";
       listEl.appendChild(empty);
     }
-    todays.forEach((t) => {
+    visible.forEach((t) => {
       const isDone = done.indexOf(t.id) !== -1;
       const li = document.createElement("li");
       li.className = "task" + (isDone ? " done" : "");
@@ -257,6 +280,14 @@
     render();
   };
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") document.getElementById("addBtn").click(); });
+  document.querySelectorAll(".filter-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentFilter = btn.dataset.filter;
+      render();
+    });
+  });
   document.getElementById("resetBtn").onclick = () => { done = []; saveDone(); render(); };
   document.getElementById("logoutBtn").onclick = () => signOut(auth);
 
